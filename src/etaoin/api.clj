@@ -256,9 +256,12 @@
   Further requests to this driver will be for this session.
   Etaoin assumes one active session per driver."
   [driver & [capabilities]]
-  (let [data   (if (= (dispatch-driver driver) :safari)
-                 {:capabilities (or capabilities {})} ;; required for safari even if empty
-                 {:desiredCapabilities (or capabilities {})})
+  (let [data   (cond (= (dispatch-driver driver) :safari)
+                        {:capabilities (or capabilities {})} ;; required for safari even if empty
+                     (= (dispatch-driver driver) :selenium-grid)
+                        (or capabilities {})
+                     :else
+                        {:desiredCapabilities (or capabilities {})})
         result (execute {:driver driver
                          :method :post
                          :path   [:session]
@@ -592,7 +595,7 @@
 (defmulti ^:private find-element* dispatch-driver)
 
 (defmethods find-element*
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver locator term]
   (-> (execute {:driver driver
                 :method :post
@@ -2821,7 +2824,7 @@
             :data   {:value (apply make-input* text more)}}))
 
 (defmethods fill-el
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver el text & more]
   {:pre [(some? el)]}
   (execute {:driver driver
@@ -3524,7 +3527,9 @@
   -- `:capabilities` a map of desired capabilities your
   browser should support;
 
-  -- `:desired-capabilities`: an alias for `:capabilities`.
+  -- `:desired-capabilities`: an alias for `:capabilities`;
+
+  -- `:raw-capabilities`: pass capabilities 'as is'.
 
   -- `headless` is a boolean flag to run the browser in headless mode
   (i.e. without GUI window). Useful when running tests on CI servers
@@ -3573,7 +3578,8 @@
                      user-agent
                      capabilities
                      load-strategy
-                     desired-capabilities]}]]
+                     desired-capabilities
+                     raw-capabilities]}]]
   (when (not webdriver-url)
     (wait-running driver))
   (let [type          (:type driver)
@@ -3589,6 +3595,7 @@
                         prefs         (drv/set-prefs prefs)
                         profile       (drv/set-profile profile)
                         user-agent    (drv/set-user-agent user-agent)
+                        raw-capabilities (drv/set-capabilities raw-capabilities)
                         :always
                         ;; NOTE: defaults overriding specific capabilities potentially set by above seems suspect
                         ;; but... maybe... not worth worrying about?
@@ -3695,6 +3702,12 @@
   `opts` map is optionally, see [Driver Options](/doc/01-user-guide.adoc#driver-options)."
   (partial boot-driver :safari))
 
+(def ^{:arglists '([] [opts])} selenium-grid
+  "Launch and return a Safari driver.
+
+  `opts` map is optionally, see [Driver Options](/doc/01-user-guide.adoc#driver-options)."
+  (partial boot-driver :selenium-grid))
+
 (defn chrome-headless
   "Launch and return a headless Chrome driver.
 
@@ -3790,6 +3803,23 @@
   {:arglists '([opts? bind & body])}
   [& args]
   `(with-driver :chrome ~@args))
+
+(defmacro with-selenium-grid
+  "Executes `body` with a Selenium grid driver session bound to `bind`.
+
+  Driver is automatically launched and terminated (even if an exception occurs).
+
+  `opts` map can be omitted, see [Driver Options](/doc/01-user-guide.adoc#driver-options).
+
+  Example:
+
+  ```Clojure
+  (with-selenium-grid driver
+    (go driver \"https://clojure.org\"))
+  ```"
+  {:arglists '([opts? bind & body])}
+  [& args]
+  `(with-driver :selenium-grid ~@args))
 
 (defmacro with-edge
   "Executes `body` with an Edge driver session bound to `bind`.
