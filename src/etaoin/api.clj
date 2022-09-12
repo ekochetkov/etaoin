@@ -291,7 +291,7 @@
   dispatch-driver)
 
 (defmethods get-active-element*
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver]
   (-> (execute {:driver driver
                 :method :get
@@ -323,7 +323,7 @@
                     :path   [:session (:session driver) :window_handle]})))
 
 (defmethods get-window-handle
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver]
   (:value (execute {:driver driver
                     :method :get
@@ -335,7 +335,7 @@
   dispatch-driver)
 
 (defmethods get-window-handles
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver]
   (:value (execute {:driver driver
                     :method :get
@@ -400,7 +400,7 @@
   dispatch-driver)
 
 (defmethods maximize
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver]
   (execute {:driver driver
             :method :post
@@ -420,7 +420,7 @@
   dispatch-driver)
 
 (defmethods get-window-size
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver]
   (-> (execute {:driver driver
                 :method :get
@@ -444,7 +444,7 @@
   dispatch-driver)
 
 (defmethods get-window-position
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver]
   (-> (execute {:driver driver
                 :method :get
@@ -627,7 +627,7 @@
 (defmulti ^:private find-element-from* dispatch-driver)
 
 (defmethods find-element-from*
-  [:firefox :safari]
+  [:firefox :safari :selenium-grid]
   [driver el locator term]
   {:pre [(some? el)]}
   (-> (execute {:driver driver
