@@ -175,7 +175,19 @@
 (def ^{:doc "WebDriver driver type specific option defaults.
              Note that for locally launched WebDriver processes the default port is a random free port."}
   defaults
-  {:firefox {:port 4444
+  {:selenium-grid {:retry-on-exception {:try-count 5
+                                        :try-wait-interval-ms 5000
+                                        :try-predicate
+                                          (fn [e]
+                                            (let [error   (get-in (ex-data e) [:response :value :error])
+                                                  message (get-in (ex-data e) [:response :value :message])]
+                                              (or (= (type (ex-cause e))
+                                                     java.net.SocketTimeoutException)
+                                                  (and (= error "unknown error")
+                                                       (str/starts-with? message
+                                                                        "Expected to read a START_MAP")))))}}
+
+   :firefox {:port 4444
              :path-driver "geckodriver"}
    :chrome  {:port 9515
              :path-driver "chromedriver"}
