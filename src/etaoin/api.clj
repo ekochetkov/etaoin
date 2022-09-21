@@ -232,7 +232,26 @@
   ;; => {:value \"https://clojure.org/\"}
   ```"
   [{:keys [driver method path data]}]
-  (client/call driver method path data))
+  (let [{:keys [try-count
+                try-wait-interval-ms
+                try-predicate]} (:retry-on-exception driver)
+        try-count               (or try-count 1)
+        try-wait-interval-ms    (or try-wait-interval-ms 3000)]
+    (loop [n try-count]
+      (if-let [result (try
+                        [(client/call driver method path data)]
+                        (catch Exception e
+                          (when (or (nil? try-predicate)
+                                    (let [retry (try-predicate e)]
+                                      (or (not retry)
+                                          (and retry
+                                               (zero? n)))))
+                            (throw e))))]
+        (result 0)
+        (do
+          (println "Try exec last webdriver request again after" try-wait-interval-ms "ms. Last attempts: " (dec n))
+          (Thread/sleep try-wait-interval-ms)
+          (recur (dec n)))))))
 
 ;;
 ;; session and status
@@ -3579,7 +3598,8 @@
                      capabilities
                      load-strategy
                      desired-capabilities
-                     raw-capabilities]}]]
+                     raw-capabilities
+                     retry-on-exception]}]]
   (when (not webdriver-url)
     (wait-running driver))
   (let [type          (:type driver)
@@ -3596,6 +3616,7 @@
                         profile       (drv/set-profile profile)
                         user-agent    (drv/set-user-agent user-agent)
                         raw-capabilities (drv/set-capabilities raw-capabilities)
+                        retry-on-exception (assoc :retry-on-exception retry-on-exception)
                         :always
                         ;; NOTE: defaults overriding specific capabilities potentially set by above seems suspect
                         ;; but... maybe... not worth worrying about?
