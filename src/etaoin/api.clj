@@ -501,7 +501,7 @@
             :path   [:session (:session driver) :window :size]
             :data   {:width width :height height}}))
 
-(defmethod set-window-size* :safari
+(defmethods set-window-size* [:safari :selenium-grid]
   [driver width height]
   (execute {:driver driver
             :method :post
